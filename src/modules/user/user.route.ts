@@ -9,19 +9,24 @@ const router = Router();
 router.post(
   "/create",
   validateRequest(UserValidation.createUserSchema),
-  UserController.createUser
+  UserController.createUser,
 );
 
-router.get(
-  "/",
-  auth("SUPER_ADMIN", "ADMIN"),
-  UserController.getAllUsers
+router.post(
+  "/login",
+  validateRequest(UserValidation.loginUserSchema),
+  UserController.loginUser,
 );
 
-router.delete(
+router.get("/", auth("SUPER_ADMIN", "ADMIN"), UserController.getAllUsers);
+
+router.patch(
   "/:id",
-  auth("SUPER_ADMIN"),
-  UserController.deleteUser
+  auth("SUPER_ADMIN", "ADMIN"),
+  validateRequest(UserValidation.updateUserSchema),
+  UserController.updateUser,
 );
+
+router.delete("/:id", auth("SUPER_ADMIN"), UserController.deleteUser);
 
 export const UserRoutes = router;

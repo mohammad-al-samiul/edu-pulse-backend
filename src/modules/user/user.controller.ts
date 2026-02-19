@@ -15,8 +15,6 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const loginUser = catchAsync(async (req: Request, res: Response) => {
- 
-
   const result = await UserService.loginUser(req.body);
 
   sendResponse(res, {
@@ -38,6 +36,21 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateUser = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.updateUser(
+    req.params.id as string,
+    req.body,
+    req.user,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User updated successfully",
+    data: result,
+  });
+});
+
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   await UserService.deleteUser(req.params.id as string);
 
@@ -50,6 +63,8 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
 
 export const UserController = {
   createUser,
+  loginUser,
   getAllUsers,
+  updateUser,
   deleteUser,
 };

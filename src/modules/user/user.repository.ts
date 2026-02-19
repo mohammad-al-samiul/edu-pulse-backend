@@ -12,6 +12,20 @@ const findByEmail = async (email: string) => {
   }).select("+password");
 };
 
+const findById = async (id: string) => {
+  return await User.findOne({
+    _id: id,
+    deletedAt: null,
+  });
+};
+
+const updateById = async (id: string, payload: Partial<IUser>) => {
+  return await User.findByIdAndUpdate(id, payload, {
+    new: true,
+    runValidators: true,
+  });
+};
+
 const findAll = async () => {
   return await User.find({ deletedAt: null });
 };
@@ -25,6 +39,8 @@ const softDelete = async (id: string) => {
 export const UserRepository = {
   createUser,
   findByEmail,
+  findById,
+  updateById,
   findAll,
   softDelete,
 };

@@ -58,6 +58,34 @@ const getAllUsers = async () => {
   return await UserRepository.findAll();
 };
 
+const updateUser = async (
+  id: string,
+  payload: Partial<IUser>,
+  requester: any,
+) => {
+  const user = await UserRepository.findById(id);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // SUPER_ADMIN full access
+  if (requester.role === "SUPER_ADMIN") {
+    return await UserRepository.updateById(id, payload);
+  }
+
+  //  ADMIN cannot modify SUPER_ADMIN
+  if (requester.role === "ADMIN") {
+    if (user.role === "SUPER_ADMIN") {
+      throw new AppError("Cannot modify Super Admin", 403);
+    }
+
+    return await UserRepository.updateById(id, payload);
+  }
+
+  throw new AppError("Unauthorized access", 403);
+};
+
 const deleteUser = async (id: string) => {
   const deleted = await UserRepository.softDelete(id);
 
@@ -72,5 +100,6 @@ export const UserService = {
   createUser,
   loginUser,
   getAllUsers,
+  updateUser,
   deleteUser,
 };
