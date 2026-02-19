@@ -8,16 +8,22 @@ import cors from "cors";
 import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import { notFound } from "./middlewares/notFound";
 import { logger } from "./utils/logger";
+import router from "./route";
 
 const app = express();
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(logger);
 
-// app.use("/api/v1", routes);
+// Versioning
+app.use("/api/v1", router);
 
+// Not Found Middleware
 app.use(notFound);
+
+// Global Error Handler (Must be last)
 app.use(globalErrorHandler);
 
 export default app;
