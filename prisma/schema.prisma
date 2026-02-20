@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+   url = env("DB_URL")
+ 
+}
+
+
+
+///////////////////////////////////////////////////////
+//////////////////// ENUMS ////////////////////////////
+///////////////////////////////////////////////////////
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum Status {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+///////////////////////////////////////////////////////
+//////////////////// USER /////////////////////////////
+///////////////////////////////////////////////////////
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  status    Status   @default(ACTIVE)
+
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  refreshTokens RefreshToken[]
+  enrollments   Enrollment[]
+  courses       Course[]      @relation("InstructorCourses")
+  notifications Notification[]
+
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+///////////////////////////////////////////////////////
+//////////////// REFRESH TOKEN ////////////////////////
+///////////////////////////////////////////////////////
+
+model RefreshToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+///////////////////////////////////////////////////////
+//////////////////// CATEGORY /////////////////////////
+///////////////////////////////////////////////////////
+
+model Category {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  courses   Course[]
+}
+
+///////////////////////////////////////////////////////
+//////////////////// COURSE ///////////////////////////
+///////////////////////////////////////////////////////
+
+model Course {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String
+  thumbnail       String?
+  price           Float
+  isFree          Boolean  @default(false)
+  status          CourseStatus @default(DRAFT)
+
+  totalLessons     Int     @default(0)
+  totalEnrollments Int     @default(0)
+  totalRevenue     Float   @default(0)
+
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instructorId String   @db.ObjectId
+  categoryId   String   @db.ObjectId
+
+  instructor User     @relation("InstructorCourses", fields: [instructorId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  lessons    Lesson[]
+  enrollments Enrollment[]
+
+  @@index([instructorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+///////////////////////////////////////////////////////
+//////////////////// LESSON ///////////////////////////
+///////////////////////////////////////////////////////
+
+model Lesson {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String?
+  videoUrl  String?
+  order     Int
+  isPreview Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  courseId String  @db.ObjectId
+  course   Course  @relation(fields: [courseId], references: [id])
+
+  @@index([courseId])
+  @@index([order])
+}
+
+///////////////////////////////////////////////////////
+//////////////////// ENROLLMENT ///////////////////////
+///////////////////////////////////////////////////////
+
+model Enrollment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String   @db.ObjectId
+  courseId  String   @db.ObjectId
+
+  progress  Float    @default(0)
+  status    EnrollmentStatus @default(ACTIVE)
+
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  student User   @relation(fields: [studentId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+///////////////////////////////////////////////////////
+//////////////////// NOTIFICATION /////////////////////
+///////////////////////////////////////////////////////
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}

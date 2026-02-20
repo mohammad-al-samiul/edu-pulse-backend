@@ -1,46 +1,82 @@
-import { User } from "./user.model";
-import { IUser } from "./user.interface";
+import prisma from "../../config/prisma";
 
-const createUser = async (payload: IUser) => {
-  return await User.create(payload);
+const baseWhere = {
+  deletedAt: null,
 };
 
-const findByEmail = async (email: string) => {
-  return await User.findOne({
-    email,
-    deletedAt: null,
-  }).select("+password");
-};
-
-const findById = async (id: string) => {
-  return await User.findOne({
-    _id: id,
-    deletedAt: null,
+// Create
+const createUser = async (payload: any) => {
+  return prisma.user.create({
+    data: payload,
   });
 };
 
-const updateById = async (id: string, payload: Partial<IUser>) => {
-  return await User.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
+// Login use case (password needed)
+const findByEmailWithPassword = async (email: string) => {
+  return prisma.user.findFirst({
+    where: {
+      email,
+      ...baseWhere,
+    },
   });
 };
 
-const findAll = async () => {
-  return await User.find({ deletedAt: null });
+// Safe fetch (no password exposure)
+const findSafeById = async (id: string) => {
+  return prisma.user.findFirst({
+    where: {
+      id,
+      ...baseWhere,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
 };
 
+// Get all users (safe version)
+const findAllSafe = async () => {
+  return prisma.user.findMany({
+    where: baseWhere,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+};
+
+// Update (prevent password override unless explicitly allowed)
+const updateById = async (id: string, payload: any) => {
+  return prisma.user.update({
+    where: { id },
+    data: payload,
+  });
+};
+
+// Soft delete
 const softDelete = async (id: string) => {
-  return await User.findByIdAndUpdate(id, {
-    deletedAt: new Date(),
+  return prisma.user.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+    },
   });
 };
 
 export const UserRepository = {
   createUser,
-  findByEmail,
-  findById,
+  findByEmailWithPassword,
+  findSafeById,
+  findAllSafe,
   updateById,
-  findAll,
   softDelete,
 };

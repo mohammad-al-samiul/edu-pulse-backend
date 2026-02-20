@@ -1,29 +1,49 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+
 import { config } from "../config/env";
 import { AppError } from "../errors/AppError";
+import prisma from "../config/prisma";
 
-export const auth = (...requiredRoles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization;
-
-    if (!token) {
-      return next(new AppError("You are not authorized", 401));
-    }
-
+export const auth =
+  (...allowedRoles: string[]) =>
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const decoded = jwt.verify(token, config.jwt_secret) as any;
+      const authHeader = req.headers.authorization;
 
-      req.user = decoded;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new AppError("Unauthorized access", 401);
+      }
 
-      // Role based check
-      if (requiredRoles.length && !requiredRoles.includes(decoded.role)) {
-        return next(new AppError("Forbidden access", 403));
+      const token = authHeader.split(" ")[1];
+
+      const decoded: any = jwt.verify(token, config.jwt_secret);
+
+      const user = await prisma.user.findFirst({
+        where: {
+          id: decoded.userId,
+          deletedAt: null,
+        },
+      });
+
+      if (!user) {
+        throw new AppError("User not found", 404);
+      }
+
+      if (user.status === "SUSPENDED") {
+        throw new AppError("User is suspended", 403);
+      }
+
+      // Attach user to request
+      (req as any).user = user;
+
+      // Role based restriction
+      if (allowedRoles.length && !allowedRoles.includes(user.role)) {
+        throw new AppError("Forbidden", 403);
       }
 
       next();
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   };
-};
