@@ -20,6 +20,7 @@ app.use(logger);
 
 // Versioning
 app.use("/api/v1", router);
+
 app.get("/", (req, res) => {
   res.json({ message: "API running 🚀" });
 });

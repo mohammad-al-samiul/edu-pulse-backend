@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { IUser } from "./user.interface";
 import { UserRepository } from "./user.repository";
 
@@ -26,8 +27,12 @@ const createUser = async (payload: IUser) => {
   const hashedPassword = await bcrypt.hash(payload.password, 10);
 
   const user = await UserRepository.createUser({
-    ...payload,
+    name: payload.name,
+    email: payload.email,
     password: hashedPassword,
+    role: payload.role ?? "STUDENT",
+    status: payload.status ?? "ACTIVE",
+    deletedAt: null,
   });
 
   return user;
@@ -68,12 +73,16 @@ const loginUser = async (payload: Partial<IUser>) => {
   const accessToken = generateAccessToken(payloadForToken);
   const refreshToken = generateRefreshToken(payloadForToken);
 
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
   await RefreshTokenRepository.createToken(
-    refreshToken,
+    hashedToken,
     user.id,
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   );
-
   return {
     accessToken,
     refreshToken,
@@ -85,7 +94,9 @@ const loginUser = async (payload: Partial<IUser>) => {
 //////////////////////////////////////////////////
 
 const refreshAccessToken = async (token: string) => {
-  const storedToken = await RefreshTokenRepository.findToken(token);
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const storedToken = await RefreshTokenRepository.findToken(hashedToken);
 
   if (!storedToken) {
     throw new AppError("Invalid refresh token", 403);
@@ -110,7 +121,13 @@ const refreshAccessToken = async (token: string) => {
 //////////////////////////////////////////////////
 
 const logoutUser = async (refreshToken: string) => {
-  await RefreshTokenRepository.deleteToken(refreshToken);
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  await RefreshTokenRepository.deleteToken(hashedToken);
+
   return null;
 };
 

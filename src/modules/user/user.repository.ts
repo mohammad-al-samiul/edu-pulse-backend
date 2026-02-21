@@ -1,7 +1,7 @@
 import prisma from "../../config/prisma";
 
 const baseWhere = {
-  deletedAt: null,
+  OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
 };
 
 // Create

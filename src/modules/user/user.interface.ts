@@ -6,7 +6,7 @@ export interface IUser {
   name: string;
   email: string;
   password: string;
-  role: TUserRole;
-  status: TUserStatus;
+  role?: TUserRole;
+  status?: TUserStatus;
   deletedAt?: Date | null;
 }
