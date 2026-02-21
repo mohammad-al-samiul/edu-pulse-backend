@@ -1,6 +1,6 @@
 // FIX FOR MONGODB ATLAS DNS / SRV LOOKUP ERROR
-import dns from "node:dns/promises";
-dns.setServers(["1.1.1.1", "1.0.0.1"]);
+// import dns from "node:dns/promises";
+// dns.setServers(["1.1.1.1", "1.0.0.1"]);
 
 import "dotenv/config";
 import express from "express";
@@ -20,6 +20,9 @@ app.use(logger);
 
 // Versioning
 app.use("/api/v1", router);
+app.get("/", (req, res) => {
+  res.json({ message: "API running 🚀" });
+});
 
 // Not Found Middleware
 app.use(notFound);

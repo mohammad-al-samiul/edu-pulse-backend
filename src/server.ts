@@ -4,9 +4,7 @@ import prisma from "./config/prisma";
 
 const startServer = async () => {
   try {
-    // Optional: test DB connection
     await prisma.$connect();
-
     console.log("✅ Database connected successfully");
 
     app.listen(config.port, () => {
