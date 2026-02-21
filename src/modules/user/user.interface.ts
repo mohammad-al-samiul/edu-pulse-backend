@@ -10,7 +10,3 @@ export interface IUser {
   status: TUserStatus;
   deletedAt?: Date | null;
 }
-
-export interface IUserMethods {
-  comparePassword(plainPassword: string): Promise<boolean>;
-}

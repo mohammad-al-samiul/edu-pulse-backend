@@ -3,6 +3,10 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { UserService } from "./user.service";
 
+//////////////////////////////////////////////////
+// CREATE USER
+//////////////////////////////////////////////////
+
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.createUser(req.body);
 
@@ -13,6 +17,10 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+//////////////////////////////////////////////////
+// LOGIN USER
+//////////////////////////////////////////////////
 
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.loginUser(req.body);
@@ -25,6 +33,43 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//////////////////////////////////////////////////
+// REFRESH ACCESS TOKEN
+//////////////////////////////////////////////////
+
+const refreshAccessToken = catchAsync(async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  const result = await UserService.refreshAccessToken(refreshToken);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Access token refreshed successfully",
+    data: result,
+  });
+});
+
+//////////////////////////////////////////////////
+// LOGOUT USER
+//////////////////////////////////////////////////
+
+const logoutUser = catchAsync(async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  await UserService.logoutUser(refreshToken);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User logged out successfully",
+  });
+});
+
+//////////////////////////////////////////////////
+// GET ALL USERS
+//////////////////////////////////////////////////
+
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getAllUsers();
 
@@ -35,6 +80,10 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+//////////////////////////////////////////////////
+// UPDATE USER
+//////////////////////////////////////////////////
 
 const updateUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.updateUser(
@@ -51,6 +100,10 @@ const updateUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//////////////////////////////////////////////////
+// DELETE USER
+//////////////////////////////////////////////////
+
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   await UserService.deleteUser(req.params.id as string);
 
@@ -64,6 +117,8 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
 export const UserController = {
   createUser,
   loginUser,
+  refreshAccessToken,
+  logoutUser,
   getAllUsers,
   updateUser,
   deleteUser,
