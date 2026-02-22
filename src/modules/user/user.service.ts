@@ -2,14 +2,15 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { IUser } from "./user.interface";
 import { UserRepository } from "./user.repository";
-
+import { RefreshTokenRepository } from "./refreshToken.repository";
 import { AppError } from "../../errors/AppError";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
 } from "../../utils/jwt";
-import { RefreshTokenRepository } from "./refreshToken.repository";
+import { CacheService } from "../../redis/cache.service";
+import { publishEvent } from "../../queue/publisher";
 
 //////////////////////////////////////////////////
 // CREATE USER
@@ -83,6 +84,7 @@ const loginUser = async (payload: Partial<IUser>) => {
     user.id,
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   );
+
   return {
     accessToken,
     refreshToken,
@@ -132,15 +134,45 @@ const logoutUser = async (refreshToken: string) => {
 };
 
 //////////////////////////////////////////////////
-// GET ALL USERS (SAFE)
+// GET ALL USERS (REDIS CACHED)
 //////////////////////////////////////////////////
 
 const getAllUsers = async () => {
-  return UserRepository.findAllSafe();
+  const cacheKey = "users:list";
+
+  const cached = await CacheService.getCache(cacheKey);
+  if (cached !== null) return cached;
+
+  const users = await UserRepository.findAllSafe();
+
+  await CacheService.setCache(cacheKey, users, 120);
+
+  return users;
 };
 
 //////////////////////////////////////////////////
-// UPDATE USER (RBAC Safe)
+// GET SINGLE USER (REDIS CACHED)
+//////////////////////////////////////////////////
+
+const getUserById = async (id: string) => {
+  const cacheKey = `user:${id}`;
+
+  const cached = await CacheService.getCache(cacheKey);
+  if (cached !== null) return cached;
+
+  const user = await UserRepository.findSafeById(id);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  await CacheService.setCache(cacheKey, user, 300);
+
+  return user;
+};
+
+//////////////////////////////////////////////////
+// UPDATE USER (RBAC SAFE + CACHE INVALIDATION)
 //////////////////////////////////////////////////
 
 const updateUser = async (
@@ -154,25 +186,25 @@ const updateUser = async (
     throw new AppError("User not found", 404);
   }
 
-  // SUPER_ADMIN → full access
-  if (requester.role === "SUPER_ADMIN") {
-    return UserRepository.updateById(id, payload);
+  if (requester.role !== "SUPER_ADMIN" && requester.role !== "ADMIN") {
+    throw new AppError("Unauthorized access", 403);
   }
 
-  // ADMIN → cannot modify SUPER_ADMIN
-  if (requester.role === "ADMIN") {
-    if (user.role === "SUPER_ADMIN") {
-      throw new AppError("Cannot modify Super Admin", 403);
-    }
-
-    return UserRepository.updateById(id, payload);
+  if (requester.role === "ADMIN" && user.role === "SUPER_ADMIN") {
+    throw new AppError("Cannot modify Super Admin", 403);
   }
 
-  throw new AppError("Unauthorized access", 403);
+  const updated = await UserRepository.updateById(id, payload);
+
+  // simple invalidation
+  await CacheService.deleteCache(`user:${id}`);
+  await CacheService.deleteCache("users:list");
+
+  return updated;
 };
 
 //////////////////////////////////////////////////
-// DELETE USER (SOFT DELETE)
+// DELETE USER (SOFT DELETE + CACHE INVALIDATION)
 //////////////////////////////////////////////////
 
 const deleteUser = async (id: string) => {
@@ -183,15 +215,19 @@ const deleteUser = async (id: string) => {
   }
 
   await UserRepository.softDelete(id);
+
+  await CacheService.deleteCache(`user:${id}`);
+  await CacheService.deleteCache("users:list");
+
   return null;
 };
-
 export const UserService = {
   createUser,
   loginUser,
   refreshAccessToken,
   logoutUser,
   getAllUsers,
+  getUserById,
   updateUser,
   deleteUser,
 };

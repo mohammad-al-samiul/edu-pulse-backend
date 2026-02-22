@@ -31,6 +31,7 @@ router.post("/logout", UserController.logoutUser);
 //////////////////////////////////////////////////
 
 router.get("/", auth("SUPER_ADMIN", "ADMIN"), UserController.getAllUsers);
+router.get("/:id", auth("ADMIN", "SUPER_ADMIN"), UserController.getUserById);
 
 router.patch(
   "/:id",

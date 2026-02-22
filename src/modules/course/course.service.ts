@@ -14,24 +14,11 @@ const createCourse = async (payload: any, instructorId: string) => {
     deletedAt: null,
   });
 
-  // Cache version bump
-  const currentVersion = (await CacheService.getCache("courses:version")) || 1;
-
-  await CacheService.setCache("courses:version", currentVersion + 1);
-
-  // Publish event (non-blocking safe)
-  try {
-    await publishEvent("course.created", {
-      courseId: course.id,
-      instructorId,
-    });
-  } catch (err) {
-    console.error("Event publish failed:", err);
-  }
+  // optional: clear first page cache only
+  await CacheService.deleteCache("courses:list:page=1:limit=10");
 
   return course;
 };
-
 //////////////////////////////////////////////////
 // GET ALL COURSES (Redis + Pagination + Count)
 //////////////////////////////////////////////////
@@ -41,17 +28,12 @@ const getAllCourses = async (query: any) => {
   const limit = Number(query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  //  Get version for cache consistency
-  const version = (await CacheService.getCache("courses:version")) || 1;
-
-  const cacheKey = `courses:list:v${version}:page=${page}:limit=${limit}`;
+  const cacheKey = `courses:list:page=${page}:limit=${limit}`;
 
   const cached = await CacheService.getCache(cacheKey);
-  if (cached) return cached;
+  if (cached !== null) return cached;
 
-  const filter = {
-    status: "PUBLISHED",
-  };
+  const filter = { status: "PUBLISHED" };
 
   const { data, total } = await CourseRepository.findAllWithCount(
     filter,
@@ -69,7 +51,7 @@ const getAllCourses = async (query: any) => {
     data,
   };
 
-  await CacheService.setCache(cacheKey, result, 300);
+  await CacheService.setCache(cacheKey, result, 120);
 
   return result;
 };
@@ -82,7 +64,7 @@ const getSingleCourse = async (id: string) => {
   const cacheKey = `course:${id}`;
 
   const cached = await CacheService.getCache(cacheKey);
-  if (cached) return cached;
+  if (cached !== null) return cached;
 
   const course = await CourseRepository.findById(id);
 
@@ -106,7 +88,6 @@ const updateCourse = async (id: string, payload: any, requester: any) => {
     throw new AppError("Course not found", 404);
   }
 
-  //  Ownership check
   if (
     requester.role === "INSTRUCTOR" &&
     course.instructor.id !== requester.id
@@ -116,12 +97,6 @@ const updateCourse = async (id: string, payload: any, requester: any) => {
 
   const updated = await CourseRepository.updateById(id, payload);
 
-  // Version bump
-  const currentVersion = (await CacheService.getCache("courses:version")) || 1;
-
-  await CacheService.setCache("courses:version", currentVersion + 1);
-
-  // Clear single cache
   await CacheService.deleteCache(`course:${id}`);
 
   return updated;

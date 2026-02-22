@@ -17,10 +17,7 @@ const createCourse = async (payload: any) => {
 const findAllWithCount = async (filter: any, skip: number, take: number) => {
   const [data, total] = await Promise.all([
     prisma.course.findMany({
-      where: {
-        ...filter,
-        deletedAt: null, // enforce soft delete
-      },
+      where: filter,
       skip,
       take,
       orderBy: { createdAt: "desc" },
@@ -30,22 +27,18 @@ const findAllWithCount = async (filter: any, skip: number, take: number) => {
           select: {
             id: true,
             name: true,
-            email: true, //  avoid exposing password
+            email: true,
           },
         },
       },
     }),
     prisma.course.count({
-      where: {
-        ...filter,
-        deletedAt: null,
-      },
+      where: filter,
     }),
   ]);
 
   return { data, total };
 };
-
 //////////////////////////////////////////////////
 // GET SINGLE COURSE
 //////////////////////////////////////////////////
