@@ -16,18 +16,14 @@ export const auth =
       }
 
       const token = authHeader.split(" ")[1];
-      console.log({ token });
       const decoded: any = jwt.verify(token, config.jwt_secret);
 
-      console.log(decoded);
       const user = await prisma.user.findFirst({
         where: {
           id: decoded.userId,
           deletedAt: null,
         },
       });
-
-      console.log("from auth middleware---------", user);
 
       if (!user) {
         throw new AppError("User not found", 404);

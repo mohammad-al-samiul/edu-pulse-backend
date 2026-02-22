@@ -8,4 +8,6 @@ export const config = {
   jwt_secret: process.env.JWT_SECRET as string,
   jwt_refresh_secret: process.env.JWT_REFRESH_SECRET as string,
   jwt_expires_in: process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"],
+  redis_url: process.env.REDIS_URL as string,
+  redis_token: process.env.REDIS_TOKEN as string,
 };
