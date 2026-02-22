@@ -11,14 +11,15 @@ const createCourse = async (payload: any, instructorId: string) => {
   const course = await CourseRepository.createCourse({
     ...payload,
     instructorId,
+    deletedAt: null,
   });
 
-  //  Cache version bump
+  // Cache version bump
   const currentVersion = (await CacheService.getCache("courses:version")) || 1;
 
   await CacheService.setCache("courses:version", currentVersion + 1);
 
-  //  Publish event (non-blocking safe)
+  // Publish event (non-blocking safe)
   try {
     await publishEvent("course.created", {
       courseId: course.id,
