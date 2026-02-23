@@ -18,20 +18,21 @@ const createLesson = async (payload: any, instructorId: string) => {
     throw new AppError("Unauthorized", 403);
   }
 
+  const { courseId, ...rest } = payload; // 🔥 remove courseId
+
   const lesson = await LessonRepository.createLesson({
-    ...payload,
-    course: { connect: { id: payload.courseId } },
+    ...rest,
+    course: { connect: { id: courseId } },
   });
 
-  // Update totalLessons
   await prisma.course.update({
-    where: { id: payload.courseId },
+    where: { id: courseId },
     data: {
       totalLessons: { increment: 1 },
     },
   });
 
-  await CacheService.deleteCache(`course:${payload.courseId}`);
+  await CacheService.deleteCache(`course:${courseId}`);
 
   return lesson;
 };
