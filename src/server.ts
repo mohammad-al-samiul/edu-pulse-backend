@@ -4,12 +4,16 @@ import prisma from "./config/prisma";
 import { initSocket } from "./config/socket";
 import { startNotificationConsumer } from "./modules/notification/notification.consumer";
 import http from "http";
+import { connectRabbitMQ } from "./queue/rabbitmq";
 
 const startServer = async () => {
   try {
     await prisma.$connect();
     console.log("✅ Database connected successfully");
 
+    // ✅ Connect RabbitMQ
+    await connectRabbitMQ();
+    console.log("✅ RabbitMQ connected");
     // Create HTTP server
     const server = http.createServer(app);
 

@@ -1,13 +1,21 @@
-import amqp from "amqplib";
+import { getChannel } from "./rabbitmq";
 
-let channel: any;
+export const publishEvent = async (queueName: string, payload: unknown) => {
+  const channel = getChannel();
 
-export const initRabbit = async () => {
-  const connection = await amqp.connect(process.env.RABBITMQ_URL!);
-  channel = await connection.createChannel();
-};
+  await channel.assertQueue(queueName, {
+    durable: true,
+  });
 
-export const publishEvent = async (queue: string, message: any) => {
-  await channel.assertQueue(queue);
-  channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+  const sent = channel.sendToQueue(
+    queueName,
+    Buffer.from(JSON.stringify(payload)),
+    {
+      persistent: true,
+    },
+  );
+
+  if (!sent) {
+    console.warn(`Queue ${queueName} is full - message not sent`);
+  }
 };
