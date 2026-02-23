@@ -14,13 +14,18 @@ const createCourse = async (payload: any) => {
 // GET ALL COURSES (Pagination + Count)
 //////////////////////////////////////////////////
 
-const findAllWithCount = async (filter: any, skip: number, take: number) => {
+const findAllWithCount = async (
+  filter: any,
+  skip: number,
+  take: number,
+  orderBy: any = { createdAt: "desc" },
+) => {
   const [data, total] = await Promise.all([
     prisma.course.findMany({
       where: filter,
       skip,
       take,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       include: {
         category: true,
         instructor: {
@@ -39,6 +44,38 @@ const findAllWithCount = async (filter: any, skip: number, take: number) => {
 
   return { data, total };
 };
+
+//////////////////////////////////////////////////
+// CURSOR-BASED PAGINATION
+//////////////////////////////////////////////////
+
+const findWithCursor = async (
+  filter: any,
+  cursor?: string,
+  limit = 10,
+  orderBy: any = { createdAt: "desc" },
+) => {
+  return prisma.course.findMany({
+    where: filter,
+    take: limit + 1,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+    orderBy,
+    include: {
+      category: true,
+      instructor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+};
+
 //////////////////////////////////////////////////
 // GET SINGLE COURSE
 //////////////////////////////////////////////////
@@ -83,27 +120,6 @@ const softDelete = async (id: string) => {
     data: {
       deletedAt: new Date(),
     },
-  });
-};
-
-//////////////////////////////////////////////////
-// CURSOR-BASED PAGINATION
-//////////////////////////////////////////////////
-
-const findWithCursor = async (
-  filter: any,
-  cursor?: string,
-  limit = 10,
-  orderBy: any = { createdAt: "desc" },
-) => {
-  return prisma.course.findMany({
-    where: filter,
-    take: limit + 1,
-    ...(cursor && {
-      cursor: { id: cursor },
-      skip: 1,
-    }),
-    orderBy,
   });
 };
 

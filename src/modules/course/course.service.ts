@@ -23,14 +23,26 @@ const createCourse = async (payload: any, instructorId: string) => {
 // GET ALL COURSES (Redis + Pagination + Count)
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// GET ALL COURSES (Cursor + Page Support)
+//////////////////////////////////////////////////
+
 const getAllCourses = async (query: any) => {
   const limit = Number(query.limit) || 10;
   const cursor = query.cursor;
+  const page = Number(query.page) || 1;
 
+  //////////////////////////////////////////////////
+  // FILTER
+  //////////////////////////////////////////////////
   const filter: any = {
     deletedAt: null,
-    status: "PUBLISHED",
   };
+
+  // Dynamic status
+  if (query.status) {
+    filter.status = query.status;
+  }
 
   if (query.categoryId) {
     filter.categoryId = query.categoryId;
@@ -43,7 +55,9 @@ const getAllCourses = async (query: any) => {
     };
   }
 
-  // 🔥 Dynamic Sorting এখানে
+  //////////////////////////////////////////////////
+  // SORTING
+  //////////////////////////////////////////////////
   const allowedSortFields = ["price", "createdAt", "totalEnrollments"];
 
   const orderBy = allowedSortFields.includes(query.sortBy)
@@ -52,23 +66,52 @@ const getAllCourses = async (query: any) => {
       }
     : { createdAt: "desc" };
 
-  const courses = await CourseRepository.findWithCursor(
+  //////////////////////////////////////////////////
+  // 1️⃣ Cursor Based Pagination
+  //////////////////////////////////////////////////
+  if (cursor) {
+    const courses = await CourseRepository.findWithCursor(
+      filter,
+      cursor,
+      limit,
+      orderBy,
+    );
+
+    let nextCursor = null;
+
+    if (courses.length > limit) {
+      const nextItem = courses.pop();
+      nextCursor = nextItem?.id;
+    }
+
+    return {
+      mode: "cursor",
+      data: courses,
+      nextCursor,
+    };
+  }
+
+  //////////////////////////////////////////////////
+  // 2️⃣ Page Based Pagination
+  //////////////////////////////////////////////////
+  const skip = (page - 1) * limit;
+
+  const { data, total } = await CourseRepository.findAllWithCount(
     filter,
-    cursor,
+    skip,
     limit,
     orderBy,
   );
 
-  let nextCursor = null;
-
-  if (courses.length > limit) {
-    const nextItem = courses.pop();
-    nextCursor = nextItem?.id;
-  }
-
   return {
-    data: courses,
-    nextCursor,
+    mode: "page",
+    data,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 };
 
