@@ -2,6 +2,9 @@ import { Router } from "express";
 import { UserRoutes } from "../modules/user/user.route";
 import { CategoryRoutes } from "../modules/category/category.route";
 import { CourseRoutes } from "../modules/course/course.route";
+import { EnrollmentRoutes } from "../modules/enrollment/enrollment.route";
+import { LessonRoutes } from "../modules/lesson/lesson.route";
+import { AnalyticsRoutes } from "../modules/analytics/analytics.route";
 
 const router = Router();
 
@@ -23,14 +26,18 @@ const moduleRoutes = [
     path: "/courses",
     route: CourseRoutes,
   },
-  // {
-  //   path: "/lessons",
-  //   route: LessonRoutes,
-  // },
-  // {
-  //   path: "/enrollments",
-  //   route: EnrollmentRoutes,
-  // },
+  {
+    path: "/lessons",
+    route: LessonRoutes,
+  },
+  {
+    path: "/enrollments",
+    route: EnrollmentRoutes,
+  },
+  {
+    path: "/analytics",
+    route: AnalyticsRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

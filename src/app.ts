@@ -10,6 +10,7 @@ import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import { notFound } from "./middlewares/notFound";
 import { logger } from "./utils/logger";
 import router from "./route";
+import { globalRateLimit } from "./middlewares/rateLimit.middleware";
 
 const app = express();
 
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use(logger);
 
 // Versioning
-app.use("/api/v1", router);
+app.use("/api/v1", globalRateLimit, router);
 
 app.get("/", (req, res) => {
   res.json({ message: "API running 🚀" });

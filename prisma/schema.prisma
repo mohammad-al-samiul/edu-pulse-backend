@@ -126,6 +126,7 @@ model Course {
   @@index([categoryId])
   @@index([status])
   @@index([deletedAt])
+  @@index([title, description])
 }
 
 ///////////////////////////////////////////////////////

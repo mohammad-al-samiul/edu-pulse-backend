@@ -86,10 +86,32 @@ const softDelete = async (id: string) => {
   });
 };
 
+//////////////////////////////////////////////////
+// CURSOR-BASED PAGINATION
+//////////////////////////////////////////////////
+
+const findWithCursor = async (
+  filter: any,
+  cursor?: string,
+  limit = 10,
+  orderBy: any = { createdAt: "desc" },
+) => {
+  return prisma.course.findMany({
+    where: filter,
+    take: limit + 1,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+    orderBy,
+  });
+};
+
 export const CourseRepository = {
   createCourse,
   findAllWithCount,
   findById,
   updateById,
   softDelete,
+  findWithCursor,
 };

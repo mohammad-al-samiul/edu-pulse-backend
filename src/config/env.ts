@@ -12,4 +12,5 @@ export const config = {
     .JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
   redis_url: process.env.REDIS_URL as string,
   redis_token: process.env.REDIS_TOKEN as string,
+  rabbitmq_url: process.env.RABBITMQ_URL as string,
 };

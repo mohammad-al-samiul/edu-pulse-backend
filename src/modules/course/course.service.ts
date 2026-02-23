@@ -24,36 +24,52 @@ const createCourse = async (payload: any, instructorId: string) => {
 //////////////////////////////////////////////////
 
 const getAllCourses = async (query: any) => {
-  const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
-  const skip = (page - 1) * limit;
+  const cursor = query.cursor;
 
-  const cacheKey = `courses:list:page=${page}:limit=${limit}`;
-
-  const cached = await CacheService.getCache(cacheKey);
-  if (cached !== null) return cached;
-
-  const filter = { status: "PUBLISHED" };
-
-  const { data, total } = await CourseRepository.findAllWithCount(
-    filter,
-    skip,
-    limit,
-  );
-
-  const result = {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPage: Math.ceil(total / limit),
-    },
-    data,
+  const filter: any = {
+    deletedAt: null,
+    status: "PUBLISHED",
   };
 
-  await CacheService.setCache(cacheKey, result, 120);
+  if (query.categoryId) {
+    filter.categoryId = query.categoryId;
+  }
 
-  return result;
+  if (query.search) {
+    filter.title = {
+      contains: query.search,
+      mode: "insensitive",
+    };
+  }
+
+  // 🔥 Dynamic Sorting এখানে
+  const allowedSortFields = ["price", "createdAt", "totalEnrollments"];
+
+  const orderBy = allowedSortFields.includes(query.sortBy)
+    ? {
+        [query.sortBy]: query.order === "asc" ? "asc" : "desc",
+      }
+    : { createdAt: "desc" };
+
+  const courses = await CourseRepository.findWithCursor(
+    filter,
+    cursor,
+    limit,
+    orderBy,
+  );
+
+  let nextCursor = null;
+
+  if (courses.length > limit) {
+    const nextItem = courses.pop();
+    nextCursor = nextItem?.id;
+  }
+
+  return {
+    data: courses,
+    nextCursor,
+  };
 };
 
 //////////////////////////////////////////////////
